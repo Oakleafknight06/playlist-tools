@@ -3,6 +3,7 @@ import re
 from difflib import SequenceMatcher as sm
 
 def convert_navi_playlist(input_file):
+    # TODO refactor so one can input strings to replace
     with open(input_file, "r") as fh:
         newfile = ""
         for line in fh:
@@ -16,10 +17,17 @@ def convert_navi_playlist(input_file):
     with open(input_file, "w") as fh:
         fh.write(newfile)
 
-def get_lib_list():
-    pass
-    # either run find in a directory, or just process a file I put in
-    # need to remove . from start, and remove all entries that aren't full paths to music files
+def format_lib_list(file) -> list:
+    """takes in a file assumed to be 'find . > file.txt' and returns a formatted list"""
+    new_file = []
+    with open(file, "r") as fh:
+        filelines = fh.readlines()
+        for line in filelines:
+            filename = line.split("/")[-1]
+            if filename.find(".") != -1:
+                new_file.append(line[1:])
+
+    return new_file
 
 def convert_yt_playlist(dirlisting, old_playlist_file):
     print("Reading directory listing")
@@ -36,8 +44,17 @@ def convert_yt_playlist(dirlisting, old_playlist_file):
 
     print("Opening old playlist")
     with open(old_playlist_file, "r") as fh:
+        # Get list from file
         pl_data = fh.readlines()
+
+        # Remove playlist m3u metadata, save name to variable
+        playlist_name = pl_data.pop(1)
+        pl_data.pop(0)
+
+        # Initialize new playlist list object
         new_playlist = []
+
+        # Matching
         for line in pl_data:
             print(f"matching {line} ...")
             # fuzzy match that to path from list we saved to a variable from file
@@ -64,7 +81,10 @@ def convert_yt_playlist(dirlisting, old_playlist_file):
             new_playlist.append(best_key)
             print("\n") # more readable logs
 
+    # NOTE requires script to be run in same directory as old_playlist_file, and file supplied with no leading ./
     with open(f"CONVERTED_{old_playlist_file}", "w") as fh:
+        # Write playlist metadata
+        fh.write(f"#EXTM3U\n{playlist_name}")
         # write each line of new_playlist to file
         for entry in new_playlist:
             fh.write(entry)
@@ -87,7 +107,8 @@ if __name__ == "__main__":
             print(f"converting {m3u_file}...")
             convert_playlist(m3u_file)
     elif choice == "2":
-        library = input("Path to library list file: ")
+        in_library = input("Path to library list file: ")
+        library = format_lib_list(in_library)
         old_playlist = input("Path to playlist to convert: ")
         convert_yt_playlist(library, old_playlist)
     elif choice == "3":
