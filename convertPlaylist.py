@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 from pathlib import Path
 import re
 from difflib import SequenceMatcher as sm
@@ -29,18 +31,15 @@ def format_lib_list(file) -> list:
 
     return new_file
 
-def convert_yt_playlist(dirlisting, old_playlist_file):
-    print("Reading directory listing")
-    with open(dirlisting, "r") as fh:
-        dirlist = fh.readlines()
-        # type ref_lib = dict[str, str] 
-        # key is filepath, value is songname
-        ref_lib = {}
-        # for item in list, extract the bit between the last slash and the . for the filename
-        for item in dirlist:
-            # takes item ('./path/to/file.ext'), splits on / and takes the last element, and then splits on . and takes the first element, leaving only the filename without the path or extension.
-            songname = item.split("/")[-1].split(".")[-2]
-            ref_lib[item] = songname
+def convert_yt_playlist(library_list, old_playlist_file):
+    print("Reading music library listing")
+
+    # Create dictionary of songs to compare against, with key=PATH and value=songname
+    ref_lib = {}
+    for item in library_list:
+        # takes item ('./path/to/file.ext'), splits on / and takes the last element, and then splits on . and takes the first element, leaving only the filename without the path or extension.
+        songname = item.split("/")[-1].split(".")[-2]
+        ref_lib[item] = songname
 
     print("Opening old playlist")
     with open(old_playlist_file, "r") as fh:
