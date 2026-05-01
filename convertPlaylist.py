@@ -39,6 +39,11 @@ def convert_yt_playlist(library_list, old_playlist_file):
     for item in library_list:
         # takes item ('./path/to/file.ext'), splits on / and takes the last element, and then splits on . and takes the first element, leaving only the filename without the path or extension.
         songname = item.split("/")[-1].split(".")[-2]
+        # remove 'disc 01' etc from songname
+        songname = re.sub(r'(?i)^\s*Disc\s*\d+\s*-*\s*', '', songname)
+        # remove track number at beginning of songname
+        songname = re.sub(r'^\d+[\s|-]-*\s*', '', songname)
+        # put songname in dictionary
         ref_lib[item] = songname
 
     print("Opening old playlist")
