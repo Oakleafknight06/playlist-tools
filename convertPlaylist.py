@@ -37,8 +37,10 @@ def convert_yt_playlist(library_list, old_playlist_file):
     # Create dictionary of songs to compare against, with key=PATH and value=songname
     ref_lib = {}
     for item in library_list:
-        # takes item ('./path/to/file.ext'), splits on / and takes the last element, and then splits on . and takes the first element, leaving only the filename without the path or extension.
-        songname = item.split("/")[-1].split(".")[-2]
+        # takes item ('./path/to/file.ext'), splits on / and takes the last element 
+        songname = item.split("/")[-1]
+        # splits on '.' and takes the first element, leaving only the filename without the path or extension.
+        songname = songname.split(".")[0]
         # remove 'disc 01' etc from songname
         songname = re.sub(r'(?i)^\s*Disc\s*\d+\s*-*\s*', '', songname)
         # remove track number at beginning of songname
@@ -60,7 +62,8 @@ def convert_yt_playlist(library_list, old_playlist_file):
 
         # Matching
         for line in pl_data:
-            print(f"matching {line} ...")
+            f_line = line.split(".")[0]
+            print(f"matching {f_line} ...")
             # fuzzy match that to path from list we saved to a variable from file
             # note that we have no artist data
             best_key = "NOT FOUND"
@@ -70,17 +73,17 @@ def convert_yt_playlist(library_list, old_playlist_file):
                 # set fuzzyness to be okay
                 # return unmatched values at end of script
                 # see if we can set None to all types of spaces
-                matchyness = sm(None, line, value).ratio()
+                matchyness = sm(None, f_line, value).ratio()
                 # find the highest matchyness, and append the key for that into new_playlist
                 if matchyness > best_ratio:
                     best_ratio = matchyness
                     best_key = key
 
-            #if best_ratio < 0.6:
-            #    best_key = f"COULD NOT FIND {line}"
-            #    print(f"No match found for {line}")
-            #else:
-            print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
+            if best_ratio < 0.7:
+                best_key = f"COULD NOT FIND {line}"
+                print(f"No match found for {line}")
+            else:
+                print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
             # appends the path of the matched song to the playlist list (to later be written to file)
             new_playlist.append(best_key)
             print("\n") # more readable logs
