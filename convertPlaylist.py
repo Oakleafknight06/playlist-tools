@@ -4,8 +4,9 @@ from pathlib import Path
 import re
 from difflib import SequenceMatcher as sm
 
+# Deprecated
 def convert_navi_playlist(input_file):
-    # TODO refactor so one can input strings to replace
+    # TODO refactor so one can input strings to replace and rename generically
     with open(input_file, "r") as fh:
         newfile = ""
         for line in fh:
@@ -20,16 +21,61 @@ def convert_navi_playlist(input_file):
         fh.write(newfile)
 
 def format_lib_list(file) -> list:
-    """takes in a file assumed to be 'find . > file.txt' and returns a formatted list"""
-    new_file = []
+    """takes in a file assumed created by 'find . > file.txt' and returns a formatted list of filepaths"""
+    lib_list = []
     with open(file, "r") as fh:
         filelines = fh.readlines()
         for line in filelines:
             filename = line.split("/")[-1]
             if filename.find(".") != -1:
-                new_file.append(line[1:])
+                lib_list.append(line[1:].strip())
 
-    return new_file
+    return lib_list
+
+# I'll want to do this with both the new library and the playlist items. Playlist items will need to store index in playlist?
+# How do I handle no album, no artist, eg singles without folder? For library can decide based on mine and make some assumptions about folder structure. Playlists.. can make some assumptions too but the youtube converter would have to be different. Collection data from YT, spotify, and navidrome/generic .m3u from a sorted music library will be three different ways. Leads me to not abstract that out of the specific from X to generic .m3u of your library type. NOTE: converting to absolute paths a la navidrome and relative paths the way gonic operates is different. NOTE: does the find . command give me enough info to even do absolute paths? Perhaps allow specifying a thing to go in front of the music/asdf/asdf, as that's defined by the find. so ../.. for gonic, /home/user/path/to/music/.....
+
+def create_struct_lib(library_list: list[str, str]) -> list[dict, dict]:
+    """Takes in a list generated from the library filepaths and returns a dict"""
+    # Create dictionary of songs to compare against, with key=PATH and value=songname
+    struct_lib = []
+    # List of dictionaries? ie list = [dict {path: thing, songname: name, artist: hey, album: hey}]
+
+    # each <item> is a string containing the path of the music file
+    for item in library_list:
+        # Initialize dictionary for <item>'s attributes
+        item_dict = {}
+
+        # Add path
+        item_dict["path"] = item
+
+        # takes item ('./path/to/file.ext'), splits on / and takes the last element 
+        songname = item.split("/")[-1]
+        # splits on '.' and takes the first element, leaving only the filename without the path or extension.
+        songname = songname.split(".")[0]
+        # remove 'disc 01' etc from songname
+        songname = re.sub(r'(?i)^\s*Disc\s*\d+\s*-*\s*', '', songname)
+        # remove track number at beginning of songname
+        songname = re.sub(r'^\d+[\s|-]-*\s*', '', songname)
+        # Add songname to dict
+        item_dict["name"] = songname
+
+
+        # ditto for album
+        album = item.split("/")[-2]
+        item_dict["album"] = album
+
+
+        # and artist
+        artist = item.split("/")[-3]
+        item_dict["artist"] = artist
+
+        # NOTE: the above assumes /path/to/collection/<artist>/<album>/<track> folder structure
+
+        # Add to list
+        struct_lib.append(item_dict)
+
+    return struct_lib
 
 def convert_yt_playlist(library_list, old_playlist_file):
     print("Reading music library listing")
@@ -79,11 +125,12 @@ def convert_yt_playlist(library_list, old_playlist_file):
                     best_ratio = matchyness
                     best_key = key
 
-            if best_ratio < 0.7:
-                best_key = f"COULD NOT FIND {line}"
-                print(f"No match found for {line}")
-            else:
-                print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
+            if best_ratio < 0.8:
+                #best_key = f"COULD NOT FIND {line}"
+                best_key = "CHECK THIS LINE" + best_key
+            #    print(f"No match found for {line}")
+            #else:
+            print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
             # appends the path of the matched song to the playlist list (to later be written to file)
             new_playlist.append(best_key)
             print("\n") # more readable logs
@@ -99,6 +146,16 @@ def convert_yt_playlist(library_list, old_playlist_file):
 
 def convert_spot_playlist():
     # same as above, but use spotify export format, parse json
+    pass
+
+def convert_navi_to_gonic(library_list, old_playlist_file) -> None:
+    # make playlist dictionary (call function)
+    # match artist + track name
+    # log the matches in <new playlist file name>.log
+    # how to handle collection? (youtube owned misc)
+    # initialize playlist file with the # things at top
+    # extract playlist name from old file
+    # Add ../..<path from library> to playlist
     pass
 
 # add missing file handling
@@ -123,6 +180,5 @@ if __name__ == "__main__":
     else:
         print("Invalid choice")
         exit()
-
 
 
