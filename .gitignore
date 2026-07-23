@@ -2,3 +2,4 @@ __pycache__
 *.m3u
 *.txt
 *.log
+restore_playlists.sh
