@@ -77,6 +77,130 @@ def create_struct_lib(library_list: list[str, str]) -> list[dict, dict]:
 
     return struct_lib
 
+def calc_similar(a, b):
+    # calculate similarity.
+    pass
+
+def log(logfile, message):
+    with open(logfile, "a") as fh:
+        fh.write(f"{message}\n")
+
+def import_m3u(old_pl_file, path_prefix = None):
+    # should become generic from "A" type .m3u to "B" type .m3u
+    # Intermediary list of dicts with various attributes should be abstracted out. Import function outputs that, export function exports to whatever. That way export function can be shared with Spotify import function
+    # folder structure assumed as stated above
+    # Also assumes relative path
+    # Need to define prefix for relative path. Optional argument to function?
+    # Need to strip/readd .m3u metadata lines too. Specific ones for gonic
+    # ~~oops i wrote this function twice~~ nvm this one is the import function now
+
+    # NOTE this feels similar to the library import but it's not the same
+    with open (old_pl_file, "r") as fh:
+        # Get list from file
+        pl_data = fh.readlines()
+        print("read the lines")
+        log("test.log", pl_data)
+
+        print(f"pl_data = {pl_data}")
+
+        pl_nometa = []
+        for line in pl_data:
+            print(f"curr: {line}")
+            print(line[0])
+            if line[0] != '#':
+                pl_nometa.append(line)
+            
+        print(pl_nometa)
+        exit()
+
+        formatted_pl_data = create_struct_lib(pl_data)
+        for item in formatted_pl_data:
+            print("path shit")
+            item["path"] = f"{path_prefix}{item['path']}"
+
+    return formatted_pl_data
+
+
+        # Remove playlist m3u metadata, save name to variable
+        # TODO make this smarter, pull all the lines that start with '#', find one with 'name'
+        # playlist_name = pl_data.pop(1)
+        # pl_data.pop(0)
+        # pl_data now has this stuff removed
+
+        # Extract M3U metadata
+        # meta_flag = False
+        # pl_metadata = []
+        # while not meta_flag:
+        #     for line in pl_data:
+        #         if line[0] != "#":
+        #             meta_flag = True
+        #             break
+        #         else:
+        #             pl_metadata.append(line)
+        #             pl_data.remove(line)
+
+        # extract name
+        # for line in pl_metadata:
+            # if line contains PLAYLIST get the part after the :
+            # this will work only for the assumed format I already have
+        #     break
+
+                # TODO: Return the playlist metadata somehow. Or maybe this function is the main one, matchy matchy is abstracted, because this import isn't much.. no but the metadata needs to be abstracted so spotify can import and the export be the same
+
+
+def matchy_matchy():
+    new_playlist = []
+
+    # Matching
+    for line in pl_data:
+        f_line = line.split(".")[0]
+        print(f"matching {f_line} ...")
+        # fuzzy match that to path from list we saved to a variable from file
+        # note that we have no artist data
+        best_key = "NOT FOUND"
+        best_ratio = 0.0
+        for (key, value) in ref_lib.items():
+            # compare with difflib
+            # set fuzzyness to be okay
+            # return unmatched values at end of script
+            # see if we can set None to all types of spaces
+            matchyness = sm(None, f_line, value).ratio()
+            # find the highest matchyness, and append the key for that into new_playlist
+            if matchyness > best_ratio:
+                best_ratio = matchyness
+                best_key = key
+
+        if best_ratio < 0.8:
+            #best_key = f"COULD NOT FIND {line}"
+            best_key = "CHECK THIS LINE" + best_key
+        #    print(f"No match found for {line}")
+        #else:
+        print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
+        # appends the path of the matched song to the playlist list (to later be written to file)
+        new_playlist.append(best_key)
+        print("\n") # more readable logs
+        pass
+
+def write_and_export(matched_pl, pl_metadata, path_prefix = None):
+    # take in list of paths, playlist data, and write to new playlist file
+    # that will have a few lines of metadata, lines of song paths with optional prefix, and some lines that say no match found. Ideally no false positives in playlist, false negatives in logs
+    pass
+    # NOTE requires script to be run in same directory as old_playlist_file, and file supplied with no leading ./
+    # TODO import playlist metadata values properly. Assume is a list of valid lines, take list and write
+    # playlist_name = something from pl_metadata
+    with open(f"{playlist_name}-converted.m3u", "w") as fh:
+        # Write playlist metadata
+        # let's just get playlist name from the filename and forget about transferring the metadata
+        fh.write(f"#EXTM3U")
+        fh.write(f"#PLAYLIST:{playlist_name}")
+        fh.write(f'#GONIC-NAME:"{playlist_name}"')
+        # TODO add gonic stuff, additional M3U metadata
+        # write each line of new_playlist to file
+        for entry in matched_playlist:
+            # TODO add optional ../../
+            fh.write(entry)
+    print(f"Done! Saved to {playlist_name}-converted.m3u. Logs in {playlist_name}-converted.m3u.log")
+
 def convert_yt_playlist(library_list, old_playlist_file):
     print("Reading music library listing")
 
@@ -161,11 +285,28 @@ def convert_navi_to_gonic(library_list, old_playlist_file) -> None:
 # add missing file handling
 
 if __name__ == "__main__":
-    dir = Path("./")
+    old_file = input("Enter the filename of the playlist to convert: ")
+    library = input("Enter the filename of the library list thing you made with `find`: ")
+    playlist_name = input("Enter the name of the playlist: ")
+    # this will be used for new_playlist.m3u, new_playlist.log, etc
+    ref_lib = create_struct_lib(format_lib_list(library))
+    # log(f"{playlist_name}.log", f"ref_lib:\n{ref_lib}\n")
 
+    # import playlist to correct format
+    formatted_old_playlist = import_m3u(old_file, "../..")
+    log(f"{playlist_name}.log", formatted_old_playlist)
+    # match old playlist to library, return new playlist in correct format
+    # write to m3u file
+
+
+    
+
+
+    
+    exit()
     # get input, and use if tree to decide which function to apply to given playlist(s) or directory
-
     choice = input("Navidrome[1] YouTube[2] Spotify[3] > ")
+    dir = Path("./")
     if choice == "1":
         for m3u_file in dir.glob("*.m3u"):
             print(f"converting {m3u_file}...")
