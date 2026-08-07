@@ -5,20 +5,20 @@ import re
 from difflib import SequenceMatcher as sm
 
 # Deprecated
-def convert_navi_playlist(input_file):
-    # TODO refactor so one can input strings to replace and rename generically
-    with open(input_file, "r") as fh:
-        newfile = ""
-        for line in fh:
-            if line[0] == "/":
-                if line[7:14] == "Youtube":
-                    # Delete that, and replace with "from-yt"
-                    line = line[0:7] + "from-yt" + line[14:]
-                if line[7:9] == "CD":
-                    line = line[0:7] + "owned" + line[9:]
-            newfile += line
-    with open(input_file, "w") as fh:
-        fh.write(newfile)
+# def convert_navi_playlist(input_file):
+#     # TODO refactor so one can input strings to replace and rename generically
+#     with open(input_file, "r") as fh:
+#         newfile = ""
+#         for line in fh:
+#             if line[0] == "/":
+#                 if line[7:14] == "Youtube":
+#                     # Delete that, and replace with "from-yt"
+#                     line = line[0:7] + "from-yt" + line[14:]
+#                 if line[7:9] == "CD":
+#                     line = line[0:7] + "owned" + line[9:]
+#             newfile += line
+#     with open(input_file, "w") as fh:
+#         fh.write(newfile)
 
 def format_lib_list(file) -> list:
     """takes in a file assumed created by 'find . > file.txt' and returns a formatted list of filepaths"""
@@ -46,13 +46,13 @@ def create_struct_lib(library_list: list[str, str]) -> list[dict, dict]:
         # Initialize dictionary for <item>'s attributes
         item_dict = {}
 
-        # Add path
-        item_dict["path"] = item
+        # Add path, removing \n from the end
+        item_dict["path"] = item.strip()
 
         # takes item ('./path/to/file.ext'), splits on / and takes the last element 
         songname = item.split("/")[-1]
         # splits on '.' and takes the first element, leaving only the filename without the path or extension.
-        songname = songname.split(".")[0]
+        songname = songname.split(".")[-2]
         # remove 'disc 01' etc from songname
         songname = re.sub(r'(?i)^\s*Disc\s*\d+\s*-*\s*', '', songname)
         # remove track number at beginning of songname
@@ -77,15 +77,13 @@ def create_struct_lib(library_list: list[str, str]) -> list[dict, dict]:
 
     return struct_lib
 
-def calc_similar(a, b):
-    # calculate similarity.
-    pass
 
 def log(logfile, message):
     with open(logfile, "a") as fh:
         fh.write(f"{message}\n")
 
-def import_m3u(old_pl_file, path_prefix = None):
+
+def import_m3u(old_pl_file):
     # should become generic from "A" type .m3u to "B" type .m3u
     # Intermediary list of dicts with various attributes should be abstracted out. Import function outputs that, export function exports to whatever. That way export function can be shared with Spotify import function
     # folder structure assumed as stated above
@@ -98,54 +96,14 @@ def import_m3u(old_pl_file, path_prefix = None):
     with open (old_pl_file, "r") as fh:
         # Get list from file
         pl_data = fh.readlines()
-        print("read the lines")
-        log("test.log", pl_data)
-
-        print(f"pl_data = {pl_data}")
-
+        # Removes M3U metadata
         pl_nometa = []
         for line in pl_data:
-            print(f"curr: {line}")
-            print(line[0])
             if line[0] != '#':
                 pl_nometa.append(line)
-            
-        print(pl_nometa)
-        exit()
-
-        formatted_pl_data = create_struct_lib(pl_data)
-        for item in formatted_pl_data:
-            print("path shit")
-            item["path"] = f"{path_prefix}{item['path']}"
-
+        # Formats into the list/dict structure for comparison    
+        formatted_pl_data = create_struct_lib(pl_nometa)
     return formatted_pl_data
-
-
-        # Remove playlist m3u metadata, save name to variable
-        # TODO make this smarter, pull all the lines that start with '#', find one with 'name'
-        # playlist_name = pl_data.pop(1)
-        # pl_data.pop(0)
-        # pl_data now has this stuff removed
-
-        # Extract M3U metadata
-        # meta_flag = False
-        # pl_metadata = []
-        # while not meta_flag:
-        #     for line in pl_data:
-        #         if line[0] != "#":
-        #             meta_flag = True
-        #             break
-        #         else:
-        #             pl_metadata.append(line)
-        #             pl_data.remove(line)
-
-        # extract name
-        # for line in pl_metadata:
-            # if line contains PLAYLIST get the part after the :
-            # this will work only for the assumed format I already have
-        #     break
-
-                # TODO: Return the playlist metadata somehow. Or maybe this function is the main one, matchy matchy is abstracted, because this import isn't much.. no but the metadata needs to be abstracted so spotify can import and the export be the same
 
 
 def matchy_matchy():
@@ -293,33 +251,8 @@ if __name__ == "__main__":
     # log(f"{playlist_name}.log", f"ref_lib:\n{ref_lib}\n")
 
     # import playlist to correct format
-    formatted_old_playlist = import_m3u(old_file, "../..")
+    formatted_old_playlist = import_m3u(old_file)
     log(f"{playlist_name}.log", formatted_old_playlist)
     # match old playlist to library, return new playlist in correct format
     # write to m3u file
-
-
-    
-
-
-    
-    exit()
-    # get input, and use if tree to decide which function to apply to given playlist(s) or directory
-    choice = input("Navidrome[1] YouTube[2] Spotify[3] > ")
-    dir = Path("./")
-    if choice == "1":
-        for m3u_file in dir.glob("*.m3u"):
-            print(f"converting {m3u_file}...")
-            convert_playlist(m3u_file)
-    elif choice == "2":
-        in_library = input("Path to library list file: ")
-        library = format_lib_list(in_library)
-        old_playlist = input("Path to playlist to convert: ")
-        convert_yt_playlist(library, old_playlist)
-    elif choice == "3":
-        convert_spot_playlist()
-    else:
-        print("Invalid choice")
-        exit()
-
 
