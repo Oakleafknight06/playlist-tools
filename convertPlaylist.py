@@ -79,20 +79,13 @@ def create_struct_lib(library_list: list[str, str]) -> list[dict, dict]:
 
 
 def log(logfile, message):
+    """Takes 'logfile' and 'message' strings. Appends 'message' to the specified 'logfile' filename"""
     with open(logfile, "a") as fh:
         fh.write(f"{message}\n")
 
 
+# Intermediary list of dicts with various attributes should be abstracted out. Import function outputs that, export function exports to whatever. That way export function can be shared with Spotify import function
 def import_m3u(old_pl_file):
-    # should become generic from "A" type .m3u to "B" type .m3u
-    # Intermediary list of dicts with various attributes should be abstracted out. Import function outputs that, export function exports to whatever. That way export function can be shared with Spotify import function
-    # folder structure assumed as stated above
-    # Also assumes relative path
-    # Need to define prefix for relative path. Optional argument to function?
-    # Need to strip/readd .m3u metadata lines too. Specific ones for gonic
-    # ~~oops i wrote this function twice~~ nvm this one is the import function now
-
-    # NOTE this feels similar to the library import but it's not the same
     with open (old_pl_file, "r") as fh:
         # Get list from file
         pl_data = fh.readlines()
@@ -105,39 +98,43 @@ def import_m3u(old_pl_file):
         formatted_pl_data = create_struct_lib(pl_nometa)
     return formatted_pl_data
 
-
-def matchy_matchy():
+def match_pl_to_lib(old_pl, ref_lib, logfile):
+    # A list where each line is a path, i.e. the line we will write to the output file
     new_playlist = []
 
-    # Matching
-    for line in pl_data:
-        f_line = line.split(".")[0]
-        print(f"matching {f_line} ...")
-        # fuzzy match that to path from list we saved to a variable from file
-        # note that we have no artist data
-        best_key = "NOT FOUND"
-        best_ratio = 0.0
-        for (key, value) in ref_lib.items():
-            # compare with difflib
-            # set fuzzyness to be okay
-            # return unmatched values at end of script
-            # see if we can set None to all types of spaces
-            matchyness = sm(None, f_line, value).ratio()
-            # find the highest matchyness, and append the key for that into new_playlist
-            if matchyness > best_ratio:
-                best_ratio = matchyness
-                best_key = key
+    # I should probably do a better search algorithm rather than just going through every single item
+    # oh well computer go brr
+    log(logfile, "----------MATCHING PLAYLIST ITEMS----------")
+    for item in old_pl:
+        name = item["name"]
+        album = item["album"]
+        artist = item["artist"]
 
-        if best_ratio < 0.8:
-            #best_key = f"COULD NOT FIND {line}"
-            best_key = "CHECK THIS LINE" + best_key
-        #    print(f"No match found for {line}")
-        #else:
-        print(f"Best match for {line} was {best_key}, with ratio {best_ratio}")
-        # appends the path of the matched song to the playlist list (to later be written to file)
-        new_playlist.append(best_key)
-        print("\n") # more readable logs
-        pass
+        name_best_ratio = 0.0
+        album_best_ratio = 0.0
+        artist_best_ratio = 0.0
+
+        best_match = ""
+
+        for lib_item in ref_lib:
+            lib_name = lib_item["name"]
+            lib_album = lib_item["album"]
+            lib_artist = lib_item["artist"]
+
+            name_match_ratio = sm(None, name, lib_name).ratio()
+            album_match_ratio = sm(None, album, lib_album).ratio()
+            artist_match_ratio = sm(None, artist, lib_artist).ratio()
+
+            if name_match_ratio > name_best_ratio:
+                # THIS CURRENTLY ONLY MATCHES WITH NAME. HAVE NOT YET DONE MATH TO REQUIRE ALL THREE TO MATCH
+                name_best_ratio = name_match_ratio
+                best_match = lib_item["path"]
+
+        new_playlist.append(best_match)
+        log(logfile, f"Best match for \"{item["path"]}\" was \"{best_match}\"")
+    log(logfile, "----------END MATCHING----------")
+    return new_playlist
+
 
 def write_and_export(matched_pl, pl_metadata, path_prefix = None):
     # take in list of paths, playlist data, and write to new playlist file
@@ -246,13 +243,20 @@ if __name__ == "__main__":
     old_file = input("Enter the filename of the playlist to convert: ")
     library = input("Enter the filename of the library list thing you made with `find`: ")
     playlist_name = input("Enter the name of the playlist: ")
+    logfilename = f"new_{playlist_name}.log"
+
     # this will be used for new_playlist.m3u, new_playlist.log, etc
     ref_lib = create_struct_lib(format_lib_list(library))
-    # log(f"{playlist_name}.log", f"ref_lib:\n{ref_lib}\n")
+    log(logfilename, f"ref_lib:\n{ref_lib}\n")
 
     # import playlist to correct format
     formatted_old_playlist = import_m3u(old_file)
-    log(f"{playlist_name}.log", formatted_old_playlist)
+    log(logfilename, f"Old Playlist:\n{formatted_old_playlist}\n")
+
     # match old playlist to library, return new playlist in correct format
+    new_pl = match_pl_to_lib(formatted_old_playlist, ref_lib, logfilename)
+
+
     # write to m3u file
+
 
